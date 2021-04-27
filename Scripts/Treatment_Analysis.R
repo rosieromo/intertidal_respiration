@@ -4,18 +4,18 @@
 library(tidyverse)
 library(here)
 library(PNWColors)
-library(car) # qqp() and Anova()
-library(emmeans) # post-hoc test emmeans()
-library(agricolae) # HSD.test()
-library(lme4) # testing random effects
-library(lmerTest) # get anova results from lmer
+#library(car) # qqp() and Anova()
+#library(emmeans) # post-hoc test emmeans()
+#library(agricolae) # HSD.test() 
+#library(lme4) # testing random effects
+#library(lmerTest) # get anova results from lmer
 #library(MASS)
 library(patchwork)
 
 rm(list=ls())
 
 ### Read in Data
-Rdata<-read_csv(here("Output","Rosie_Trial_Output","TT_Rates.csv"))
+Rdata<-read_csv(here("Output","TT_Rates.csv"))
 head(Rdata)
 
 # umol.g.hr: Oxygen depletion rate normalized to dry weight (umol/g/hour)
@@ -150,7 +150,7 @@ respo.long <- respo.wide %>%
   pivot_longer(cols = diff_A1:A6_A7, names_to = "Assemblage.ID", values_to = "Rate.ln") %>% 
   drop_na()
 
-write.csv(respo.long, here("Output","Rosie_Trial_Output","Resp_Rates_Long.csv"))
+write.csv(respo.long, here("Output","Resp_Rates_Long.csv"))
 
 ########################################
 ### Summary Stats ###
@@ -193,10 +193,18 @@ p2<-respo.long %>%
 # both together
 p2 + p1
 
-
 ########################################
 ### Individual Trend Plots ###
 ########################################
+#4/27/21 with Danielle
+
+respo.long %>%
+  filter(Assemblage.ID == 'A5' | Assemblage.ID == 'A6' | Assemblage.ID == 'A7') %>%
+  ggplot(aes(x = Group.ID, y = Rate.ln, color = Assemblage.ID)) +
+  geom_point() + 
+  facet_wrap(~Assemblage.ID)
+
+#Danielle did this
 
 respo.long %>% 
   filter(Assemblage.ID == 'A5' | Assemblage.ID == 'A6' | Assemblage.ID == 'A7') %>% 
@@ -219,13 +227,50 @@ respo.long %>%
   geom_jitter(position = "dodge") +
   theme_bw()
 
-
-
-
 ########################################
 ### Assemblage Trend Plots ###
 ########################################
 
+### Mussels, Predatory Snail, Herbivory Snail
+#comparing observed vs expected
+  #4/27/21 with Danielle
+
+respo.long<- respo.long %>%
+  group_by(Assemblage.ID) %>%
+  mutate(mean = mean(Rate.ln))
+
+p1<-respo.long %>% 
+  filter(Assemblage.ID == 'A1' | Assemblage.ID == 'A5_A6_A7') %>%
+  ggplot(aes(x = Group.ID, y = Rate.ln)) +
+  geom_point() +
+  geom_hline(aes(yintercept = mean)) +
+  facet_wrap(~Assemblage.ID)
+  
+p2<-respo.long %>% 
+  filter(Assemblage.ID == 'A2' | Assemblage.ID == 'A5_A6') %>%
+  ggplot(aes(x = Group.ID, y = Rate.ln)) +
+  geom_point() +
+  geom_hline(aes(yintercept = mean)) +
+  facet_wrap(~Assemblage.ID)
+  
+p3<-respo.long %>% 
+  filter(Assemblage.ID == 'A3' | Assemblage.ID == 'A5_A7') %>%
+  ggplot(aes(x = Group.ID, y = Rate.ln)) +
+  geom_point() +
+  geom_hline(aes(yintercept = mean)) +
+  facet_wrap(~Assemblage.ID)
+
+p4<-respo.long %>% 
+  filter(Assemblage.ID == 'A4' | Assemblage.ID == 'A6_A7') %>%
+  ggplot(aes(x = Group.ID, y = Rate.ln)) +
+  geom_point() +
+  geom_hline(aes(yintercept = mean)) +
+  facet_wrap(~Assemblage.ID)
+
+(p1 + p2) /
+  (p3 + p4)
+
+#Danielle Did this 
 ### Mussels, Predatory Snail, Herbivory Snail
 respo.long %>% 
   filter(Assemblage.ID == 'A1' | Assemblage.ID == 'A5_A6_A7' | 
@@ -377,15 +422,15 @@ respo.long %>%
 #   scale_color_viridis_d() +
 #   scale_fill_viridis_d()
 
-
+#USE THIS ONE 
 ### All faceted
 respo.long %>% 
   filter(str_detect(Assemblage.ID, "diff")) %>% 
-  mutate(Assemblage.ID = dplyr::recode(Assemblage.ID, 
-                                       "diff_A1" = "Mussels, Tegula, & Acanthina",
-                                       "diff_A2" = "Mussels & Acanthina",
-                                       "diff_A3" = "Mussels & Tegula",
-                                       "diff_A4" = "Tegula & Acanthina")) %>% 
+  #mutate(Assemblage.ID = dplyr::recode(Assemblage.ID, 
+                                       #"diff_A1" = "Mussels, Tegula, & Acanthina",
+                                       #"diff_A2" = "Mussels & Acanthina",
+                                       #"diff_A3" = "Mussels & Tegula",
+                                       #"diff_A4" = "Tegula & Acanthina")) %>% 
   ggplot(aes(x = Group.ID, y = Rate.ln, 
              color = Group.ID, fill = Group.ID)) +
   geom_col() +
@@ -517,5 +562,26 @@ ggplot(data=graphdata, aes(x=Assemblage.ID, y=emmean, fill=Assemblage.ID)) +
   # geom_text(aes(label=c("a","b","c","d"), position = position_dodge(width=0.9), vjust = c(2,3.5,-2,-3.5))+
   geom_hline(yintercept=0)
 
+#t-tests
+#4/27/21 With Danielle
+A1<- respo.long %>%
+  filter(Assemblage.ID == "A1" | Assemblage.ID == "A5_A6_A7")
+Model1<-lm(Rate.ln ~ Assemblage.ID, data=A1)
+anova(Model1) #Different
+
+A2<- respo.long %>%
+  filter(Assemblage.ID == "A2" | Assemblage.ID == "A5_A6")
+Model2<-lm(Rate.ln ~ Assemblage.ID, data=A2)
+anova(Model2) #different
+
+A3<- respo.long %>%
+  filter(Assemblage.ID == "A3" | Assemblage.ID == "A5_A7")
+Model3<-lm(Rate.ln ~ Assemblage.ID, data=A3)
+anova(Model3) #Different
+
+A4<- respo.long %>%
+  filter(Assemblage.ID == "A4" | Assemblage.ID == "A6_A7")
+Model4<-lm(Rate.ln ~ Assemblage.ID, data=A4)
+anova(Model4) #Different
 
 
